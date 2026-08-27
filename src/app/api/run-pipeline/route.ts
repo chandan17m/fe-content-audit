@@ -1,6 +1,7 @@
 import { buildPrototypeOutput, cleanArticleText } from "@/lib/pipeline";
 
 export async function POST(request: Request) {
+  const masterPrompt = process.env.MASTER_PROMPT;
   const body = (await request.json()) as {
     content?: string;
     headline?: string;
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     status: "complete",
     cleaned,
     output,
+    promptConfigured: Boolean(masterPrompt?.trim()),
     completedAt: new Date().toISOString(),
   });
 }

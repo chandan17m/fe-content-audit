@@ -50,6 +50,7 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
   const [runState, setRunState] = useState<RunState>("idle");
   const [steps, setSteps] = useState<PipelineStep[]>(createInitialSteps);
   const [estimatedSeconds, setEstimatedSeconds] = useState(0);
+  const [editorText, setEditorText] = useState("");
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState("Ready for prototype input.");
   const outputRef = useRef<HTMLElement | null>(null);
@@ -64,6 +65,9 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
       }),
     ],
     content: "",
+    onUpdate: ({ editor: currentEditor }) => {
+      setEditorText(currentEditor.getText());
+    },
     editorProps: {
       attributes: {
         class:
@@ -73,8 +77,8 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
   });
 
   const canRun = useMemo(() => {
-    return Boolean(editor?.getText().trim()) && runState !== "cleaning" && runState !== "running";
-  }, [editor, runState]);
+    return Boolean(editorText.trim()) && runState !== "cleaning" && runState !== "running";
+  }, [editorText, runState]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -118,6 +122,7 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
     const data = (await response.json()) as { cleaned: string };
 
     editor.commands.setContent(data.cleaned || "");
+    setEditorText(data.cleaned || "");
     setSteps((items) =>
       items.map((step) => (step.id === "step-0" ? { ...step, status: "complete" } : step)),
     );
@@ -168,6 +173,7 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
 
     const data = (await response.json()) as RunResult;
     editor.commands.setContent(data.cleaned || "");
+    setEditorText(data.cleaned || "");
     setResult(data);
     setSteps((items) => items.map((step) => ({ ...step, status: "complete" })));
     setRunState("complete");
