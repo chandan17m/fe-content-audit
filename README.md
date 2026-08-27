@@ -46,11 +46,13 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 MODEL_PROVIDER_API_KEY=
-MASTER_PROMPT=
+MODULE_1_PROMPT=
+MODULE_2_PROMPT=
+MODULE_3_PROMPT=
 NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=indianexpress.com,financialexpress.com
 ```
 
-Put the master prompt in `MASTER_PROMPT` as a server-only environment variable in Vercel. Do not prefix it with `NEXT_PUBLIC_`, because that would expose it to the browser.
+The module prompts are stored in `prompts/` and loaded only by the server. In Vercel, you can optionally override them with `MODULE_1_PROMPT`, `MODULE_2_PROMPT`, and `MODULE_3_PROMPT`. Do not prefix prompt variables with `NEXT_PUBLIC_`, because that would expose them to the browser.
 
 ## Remaining Setup
 
