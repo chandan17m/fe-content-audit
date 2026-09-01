@@ -1,104 +1,42 @@
 # MODULE 3 — ACTION TAG AND OUTPUT
-## Version M3-v1.0
+
+**Your job:** Apply the decision matrix. Produce the
+final narrative output. Input: Module 2 JSON.
+Read all upstream fields as fixed. Do not re-derive.
+Output is narrative only — no JSON block.
 
 ---
 
-## CALIBRATION — READ BEFORE EVERY RUN
+## INPUT
 
 ```
-MODULE: 3 of 3 — Action Tag and output only
-THIS MODULE DOES NOT CLASSIFY.
-THIS MODULE DOES NOT SCORE.
-THIS MODULE READS MODULE 2 JSON AS FIXED,
-LOCKED DATA AND APPLIES THE DECISION MATRIX.
-
-YOUR ONLY JOB: Apply the matrix. Assign the Action
-Tag. Produce the full output JSON and editorial
-summary.
-
-MANDATORY PRE-RUN CHECKS:
-→ You have Module 2 complete JSON ready to paste
-
-DETERMINISM RULE:
-The Action Tag is the output of a matrix row lookup.
-It is not a judgment call. Find the exact row that
-matches the three scoring verdicts from Module 2.
-Apply that row. Do not reason around it.
+INPUT — MODULE 2 JSON:
+[paste complete Module 2 JSON]
 ```
+
+If Module 2 JSON is missing required fields — stop:
+`BLOCKED: Module 2 JSON incomplete. Re-run Module 2.`
 
 ---
 
-## YOUR INPUT — PASTE BEFORE RUNNING
+## STEP 1 — MENTAL HEALTH CHECK
 
-```
-INPUT — MODULE 2 SCORING JSON:
-[paste complete Module 2 JSON here]
-```
+Runs before the decision matrix.
 
----
-
-## STEP 1 — READ AND LOCK MODULE 2 FIELDS
-
-Read the following fields from Module 2 JSON.
-These are fixed. Do not re-derive them.
-
-From carried_from_m1:
-- ymyl_tier
-- section_classification
-- section_path
-- author_status
-- gates_fired
-- published_date
-- pre_publication
-- section_mismatch_flag
-
-From Module 2 scoring:
-- hcs_verdict
-- eeat_verdict
-- spam_verdict
-- flags_fired
-- primary_source_tier
-- disclaimer_found
-
-If any field is missing → stop. Output only:
-
-```
-STOP — MODULE 2 JSON IS INCOMPLETE.
-Missing field: [name it].
-Team member must re-run Module 2 and paste the
-complete JSON before Module 3 can proceed.
-```
-
----
-
-## STEP 2 — MENTAL HEALTH CHECK
-
-Check flags_fired from Module 2 JSON first.
-This check runs before the decision matrix.
-
-If [MENTAL_HEALTH_DISTRESS_UNADDRESSED Level 2]
-is in flags_fired AND all three verdicts are Fail:
+If [MENTAL_HEALTH_DISTRESS Level 2] is in `flags_fired`
+from Module 2 JSON AND all three verdicts are Fail:
 → Action Tag: DELETE_410
-→ Set human_review_required: true
-→ Set human_review_reason:
-  "Level 2 mental health distress flag with
-  triple Fail — mandatory human review before
-  any CMS action."
-→ Do not apply the decision matrix.
-→ Proceed directly to Step 5 output.
+→ HUMAN REVIEW: Yes — "Level 2 mental health distress
+  flag with triple Fail."
+→ Skip the decision matrix. Proceed directly to output.
 
 ---
 
-## STEP 3 — DECISION MATRIX
+## STEP 2 — DECISION MATRIX
 
-Map the three scoring verdicts to the matrix.
-Find the FIRST row that matches exactly.
-That row determines the Action Tag.
-
-Treat T3 Lite variants as their base equivalent:
-- Pass (T3 Lite) = Pass
-- Partial (T3 Lite) = Partial
-- Fail (T3 Lite) = Fail
+Read `hcs_verdict`, `eeat_verdict`, and `spam_verdict`
+from Module 2 JSON. Find the first row that matches exactly.
+T3 Lite variants count as their base: Pass/Partial/Fail.
 
 | Row | HCS | E-E-A-T | Spam | Action Tag |
 |---|---|---|---|---|
@@ -128,261 +66,179 @@ Treat T3 Lite variants as their base equivalent:
 | R24 | Fail | Fail | Partial | NOINDEX |
 | R25 | Fail | Fail | Fail | NOINDEX* |
 
-**Rows marked * — DELETE_410 upgrade condition:**
-Upgrade NOINDEX to DELETE_410 if ALL THREE
-conditions below are simultaneously true:
+**Rows marked * — DELETE_410 upgrade:**
+Upgrade NOINDEX → DELETE_410 if ALL THREE true:
+(1) [SOCIAL_MEDIA_AGGREGATION] or [AUTHOR_LEVEL_SCALED_ABUSE]
+    in `flags_fired` from Module 2 JSON.
+(2) Article is older than 18 months (from `published_date`
+    in Module 1 JSON) OR `pre_publication` is false and
+    `published_date` is null.
+(3) No reworkable editorial core — defined as: none of (a) a
+    named court order or regulatory ruling cited by case name,
+    (b) an original interview with a named expert, or (c) named
+    primary data from Tier A or B.
 
-(1) [SOCIAL_MEDIA_AGGREGATION] or
-    [AUTHOR_LEVEL_SCALED_ABUSE] is in flags_fired
-(2) published_date confirms article is older than
-    18 months — or pre_publication is false and
-    published_date is null (treat as upgrade eligible)
-(3) No reworkable editorial core exists.
-
-**"No reworkable editorial core" — defined:**
-A reworkable editorial core EXISTS if the article
-contains at least one of:
-(a) A named court order, ITAT order, or regulatory
-    ruling cited by case name
-(b) An original interview with a named expert
-(c) Named primary data from a Tier A or B source
-
-If none of (a), (b), or (c) exist → no reworkable
-editorial core → upgrade condition (3) is met.
-
-Record matrix_row_applied as the row code
-e.g. "R12 — Partial/Partial/Partial".
-Record delete_410_upgrade_applied as true or false.
-Record delete_410_upgrade_reason if upgrade applied.
-
-**FALLBACK RULES:**
-- Matrix row genuinely ambiguous → assign NOINDEX
-  as conservative default. Set human_review_required
-  to true. State which row was ambiguous and why
-  in human_review_reason.
-- Article could not be scored upstream → action_tag:
-  NOT_APPLICABLE. Set human_review_required to true.
+**Fallback:** matrix row genuinely ambiguous → NOINDEX as
+conservative default. Set HUMAN REVIEW REQUIRED: Yes.
 
 ---
 
-## STEP 4 — DOMAIN SIGNAL IMPACT
+## STEP 3 — DOMAIN SIGNAL IMPACT
 
-Assign one of three values based on the Action Tag
-and section classification.
-
-| Condition | Domain Signal Impact |
+| Condition | Domain Signal |
 |---|---|
-| Action Tag is RETAIN AND section is Core | Positive |
-| Action Tag is REWORK AND section is Core | Neutral |
-| Action Tag is NOINDEX | Negative |
-| Action Tag is DELETE_410 | Negative |
-| Section is Non-Core — any Action Tag | Negative |
-| Action Tag is NOT_APPLICABLE | Neutral |
+| RETAIN AND section_classification Core | Positive |
+| REWORK AND section_classification Core | Neutral |
+| NOINDEX | Negative |
+| DELETE_410 | Negative |
+| section_classification Non-Core — any tag | Negative |
+| NOT_APPLICABLE | Neutral |
 
-Write domain_signal_reason: one sentence connecting
-this URL's verdict to FE's domain-level recovery.
-Reference the specific Google update dimension
-this piece affects.
-
-Examples:
-"This RETAIN verdict on T1 market analysis with
-VERIFIED-FALLBACK authorship directly strengthens
-FE's Core% concentration and E-E-A-T signal —
-Positive."
-
-"This URL is in /trending/ and actively contributes
-to the NON-CORE content dilution pattern that
-triggered FE's Aug 2025 Spam and Feb 2026 Discover
-penalty — Negative."
+Write one sentence connecting this URL's verdict to
+FE's domain-level recovery. Reference the specific
+Google update dimension affected.
 
 ---
 
-## STEP 5 — GOOGLE UPDATE IMPLICATION
+## STEP 4 — GOOGLE UPDATE IMPLICATION
 
-Assign one value per sub-field based on the
-scoring verdicts from Module 2.
-
-**core_update_compliance:**
+**Core Update compliance:**
 - Compliant: HCS Pass AND E-E-A-T Pass
 - At Risk: HCS Partial OR E-E-A-T Partial
 - Non-Compliant: HCS Fail OR E-E-A-T Fail
 
-**spam_policy_compliance:**
+**Spam Policy compliance:**
 - Compliant: Spam Pass
 - At Risk: Spam Partial
 - Non-Compliant: Spam Fail
 
-**discover_eligibility:**
-- Eligible: section is Core AND [DISCOVER_IDENTITY_RISK]
-  is NOT in flags_fired AND Spam Pass
-- At Risk: section is Core AND [DISCOVER_IDENTITY_RISK]
-  IS in flags_fired OR Spam Partial
-- Ineligible: section is Non-Core OR Spam Fail OR
-  [NON_CORE_DOMAIN_DILUTION] is in flags_fired
+**Discover eligibility:**
+- Eligible: section_classification Core AND [DISCOVER_IDENTITY_RISK]
+  not in flags_fired AND spam_verdict Pass
+- At Risk: section_classification Core AND [DISCOVER_IDENTITY_RISK]
+  in flags_fired OR spam_verdict Partial
+- Ineligible: section_classification Non-Core OR spam_verdict Fail
+  OR [NON_CORE_DOMAIN_DILUTION] in flags_fired
 
 ---
 
-## STEP 6 — CONFIDENCE SCORE
-
-Assign one level. Apply the criteria as written.
-Do not apply judgment.
+## STEP 5 — CONFIDENCE
 
 | Level | Criteria |
 |---|---|
-| High | Every verdict traces directly to a named rule. No competing signals. Matrix row was unambiguous. A different device applying this prompt to the same Module 2 JSON would reach the same Action Tag. |
-| Medium | At least one verdict relied on a secondary criterion within a scoring table — not a hard gate. Matrix row was still unambiguous. One sentence must explain the secondary criterion applied. |
-| Low | YMYL tier was genuinely uncertain after applying all four questions. OR a scoring verdict could not be traced to a single named rule. OR matrix row was genuinely ambiguous. human_review_required: true. State which verdict or tier is uncertain and why. |
+| High | Every verdict traces to a named rule. Matrix row unambiguous. Another run on the same input reaches the same Action Tag. |
+| Medium | At least one verdict relied on a secondary criterion, not a hard gate. Matrix row still unambiguous. State the secondary criterion in output. |
+| Low | YMYL tier uncertain. OR a verdict cannot be traced to a single named rule. OR matrix row ambiguous. Set HUMAN REVIEW: Yes. State which verdict and why. |
 
 ---
 
-## STEP 7 — RECOMMENDATIONS
+## STEP 6 — RECOMMENDATIONS
 
-Build the recommendations array.
 Maximum 3 items. Priority order.
-Flags from Module 2 flags_fired are mandatory items.
-Apply flag priority order from Module 2.
+Each flag in `flags_fired` from Module 2 JSON is a mandatory
+item. Apply flag priority order from Module 2 Step 5.
 
-For RETAIN: recommendations array is empty [].
+**Urgency label — determined by Action Tag:**
 
-For REWORK and NOINDEX: list specific edits or
-actions required. Each item references the flag
-that triggered it where applicable.
-One line per item. Specific — not generic.
-Name the exact field, source, or structural element
-that needs to change.
+| Action Tag | Item 1 label | Items 2–3 label |
+|---|---|---|
+| RETAIN | Ideally | Ideally |
+| REWORK | Minimum fix before republishing | Strengthens the piece |
+| NOINDEX | Required before any reinstatement | Required before any reinstatement |
+| DELETE_410 | Deletion rationale | Redirect note if applicable |
 
-For DELETE_410: one item stating the deletion
-rationale citing the specific Google policy or
-update criterion violated.
-Include redirect recommendation only if a stronger
-canonical FE URL exists on the same topic.
+**For RETAIN:** write `None.` No items needed.
 
----
+**Format for all other Action Tags:**
+`[Urgency label] [Specific editorial action] — [what it
+achieves for the reader or signal] [FLAG_CODE]`
 
-## STEP 8 — EDITORIAL SUMMARY
-
-Two sentences maximum.
-Written for the editorial team member who receives
-this output and must act on it.
-State: what the article is, what the verdict is,
-what the single most important action is.
-No technical language from the scoring framework.
-No module names, no field names, no flag codes.
-Plain English only.
+Rules:
+- Flag code at END, in brackets. Never lead with flag code.
+- Action must be specific enough for a journalist to execute
+  without reading this prompt.
+- Name the exact section, source type, or structural element.
 
 ---
 
-## STEP 9 — SELF-CHECK BEFORE OUTPUT
+## STEP 7 — EDITORIAL OPPORTUNITY
 
-Answer all seven. Fix any NO before producing output.
+Identify a follow-up story angle that is distinct from the
+current URL — something that would score better as a
+standalone piece than as a tail paragraph here.
 
-1. Does the matrix_row_applied match the three
-   verdicts from Module 2 JSON exactly?
-2. If a * row fired, have I checked all three
-   DELETE_410 upgrade conditions explicitly?
-3. Does domain_signal_impact match the condition
-   table in Step 4 exactly?
-4. Are all three google_update_implication sub-fields
-   populated?
-5. Does confidence level trace to a testable
-   criterion — not a general impression?
-6. Are recommendations specific — naming exact
-   fields, sources, or structural elements?
-7. Is the editorial_summary free of technical
-   framework language?
+Populate when ANY of these apply:
+(1) A named case, order, or tender has a time-bound outcome
+    the current piece cannot track.
+(2) A sub-topic has its own primary source and reader need,
+    strong enough to anchor its own URL.
+(3) A sourcing gap is more efficiently resolved by
+    commissioning a new story than reworking this one.
+
+Write one sentence, editorial voice, for the desk editor.
+No flag codes, no framework language.
+
+Write `null` when none of the three conditions apply.
 
 ---
 
-## OUTPUT — ONE BLOCK
+## OUTPUT — NARRATIVE ONLY
 
-```json
-{
-  "schema_version": "M3-v1.0",
-  "classifier_version": "v3.9.0",
+```
+[ACTION: RETAIN | REWORK | NOINDEX | DELETE_410 | NOT_APPLICABLE]
 
-  "carried_from_m1": {
-    "url_path": "string | null",
-    "section_path": "string",
-    "section_classification": "Core | Non-Core | Mixed",
-    "ymyl_tier": "T1 | T2 | T3",
-    "author_status": "string",
-    "pre_publication": "true | false",
-    "published_date": "string | null"
-  },
+DOMAIN SIGNAL: [Positive | Neutral | Negative] — [one sentence]
 
-  "carried_from_m2": {
-    "hcs_verdict": "Pass | Partial | Fail",
-    "eeat_verdict": "string",
-    "spam_verdict": "Pass | Partial | Fail",
-    "flags_fired": [],
-    "primary_source_tier": "A | B | C | D | E",
-    "disclaimer_found": "true | false"
-  },
+GOOGLE UPDATE:
+- Core Update:  [Compliant | At Risk | Non-Compliant]
+- Spam Policy:  [Compliant | At Risk | Non-Compliant]
+- Discover:     [Eligible | At Risk | Ineligible]
 
-  "matrix_row_applied": "string",
-  "delete_410_upgrade_applied": "true | false",
-  "delete_410_upgrade_reason": "string | null",
+CONFIDENCE: [High | Medium | Low]
+HUMAN REVIEW: [Yes | No]
+[If Yes — one sentence: which verdict is uncertain and why]
 
-  "action_tag": "RETAIN | REWORK | NOINDEX | DELETE_410 | NOT_APPLICABLE",
+SCORING SUMMARY:
+HCS:     [hcs_verdict] — [hcs_core_finding from Module 2 JSON]
+E-E-A-T: [eeat_verdict] — [eeat_core_finding from Module 2 JSON]
+Spam:    [spam_verdict] — [spam_core_finding from Module 2 JSON]
 
-  "domain_signal_impact": "Positive | Neutral | Negative",
-  "domain_signal_reason": "string",
+RECOMMENDATIONS:
+[None. — for RETAIN]
+[Or numbered list 1–3 items for all others]
+1. [Urgency label] [Specific action] — [what it achieves] [FLAG]
+2. [Urgency label] [Specific action] — [what it achieves] [FLAG]
+3. [Urgency label] [Specific action] — [what it achieves] [FLAG]
 
-  "google_update_implication": {
-    "core_update_compliance": "Compliant | At Risk | Non-Compliant",
-    "spam_policy_compliance": "Compliant | At Risk | Non-Compliant",
-    "discover_eligibility": "Eligible | At Risk | Ineligible"
-  },
+EDITORIAL OPPORTUNITY:
+[One sentence or null]
 
-  "confidence": "High | Medium | Low",
-  "human_review_required": "true | false",
-  "human_review_reason": "string | null",
-
-  "recommendations": [
-    {
-      "priority": "1 | 2 | 3",
-      "flag": "flag code | null",
-      "action": "string"
-    }
-  ],
-
-  "editorial_summary": "string"
-}
+EDITORIAL SUMMARY:
+[Two sentences. Plain English. No flag codes, no framework
+language. Written for the journalist receiving this verdict.]
 ```
 
-Populate every field. No field may be omitted.
-null is only valid where explicitly permitted.
-carried_from_m1 and carried_from_m2 values must
-match upstream JSON exactly.
-
 ---
 
-## ABSOLUTE RULES
+## RULES
 
 1. Do not classify. Do not score. Matrix lookup only.
-2. Do not re-derive any upstream field. Read all
-   Module 1 and Module 2 fields as locked data.
-3. The Action Tag is determined by the matrix row
-   only — not by overall impression of the article.
-4. editorial_summary must contain zero technical
-   framework language — no module names, no flag
-   codes, no schema field names.
-5. For RETAIN verdicts, recommendations array is
-   empty. Do not populate it.
-6. Narrative JSON contradictions are scoring errors.
-   If the Action Tag in the JSON does not match the
-   matrix row stated in matrix_row_applied, stop and
-   correct before submitting output.
-7. Do not produce output until Step 9 self-check
-   passes on all seven points.
+2. Read all upstream fields as fixed. Do not re-derive.
+3. Action Tag is determined by the matrix row only —
+   not by overall impression.
+4. SCORING SUMMARY must carry the verbatim FINDING text
+   from Module 2 output — not rewritten.
+5. Recommendations lead with urgency label.
+   Flag code appears at end only.
+6. For RETAIN: write "None." Do not populate items.
+7. EDITORIAL OPPORTUNITY is mandatory — string or null.
+   Never omit.
+8. EDITORIAL SUMMARY: zero technical framework language,
+   zero flag codes, zero module names.
+9. If Action Tag in narrative contradicts the matrix row
+   applied — stop, correct, then output.
 
 ---
 
-*FE Content Audit Pipeline — Module 3 of 3*
-*Version: M3-v1.0 | Parent: v3.9.0*
-*Do not edit. Report ambiguities to prompt owner
-via the feedback log.*
-
----
----
-
+*FE Content Audit Pipeline | M1-v2.0 | M2-v2.0 | M3-v2.0*
+*Parent: v3.9.0*

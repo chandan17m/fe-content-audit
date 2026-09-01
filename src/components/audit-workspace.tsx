@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
+  Activity,
   Bold,
   CheckCircle2,
   Clock3,
@@ -15,13 +17,16 @@ import {
   List,
   ListOrdered,
   Loader2,
+  LockKeyhole,
   Play,
   ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 import clsx from "clsx";
 import { createInitialSteps, type PipelineOutput, type PipelineStep } from "@/lib/pipeline";
 
 type RunState = "idle" | "cleaning" | "running" | "complete" | "error";
+type WorkspaceTab = "editorial" | "admin";
 
 type RunResult = {
   runId: string;
@@ -42,6 +47,8 @@ const formatter = new Intl.DateTimeFormat("en-IN", {
 });
 
 export function AuditWorkspace({ userEmail }: { userEmail: string }) {
+  const isAdmin = userEmail.toLowerCase() === "chandan.kumar@indianexpress.com";
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("editorial");
   const [istNow, setIstNow] = useState(() => formatter.format(new Date()));
   const [headline, setHeadline] = useState("");
   const [authorName, setAuthorName] = useState("");
@@ -231,6 +238,113 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
         </div>
       </header>
 
+      <nav className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl gap-2 px-5">
+          <TabButton active={activeTab === "editorial"} onClick={() => setActiveTab("editorial")}>
+            Editorial Check
+          </TabButton>
+          {isAdmin ? (
+            <TabButton active={activeTab === "admin"} onClick={() => setActiveTab("admin")}>
+              Administration
+            </TabButton>
+          ) : null}
+        </div>
+      </nav>
+
+      {activeTab === "admin" && isAdmin ? (
+        <AdminPanel userEmail={userEmail} />
+      ) : (
+        <EditorialCheck
+          authorName={authorName}
+          canRun={canRun}
+          cleanJunk={cleanJunk}
+          editor={editor}
+          estimatedSeconds={estimatedSeconds}
+          expected={expected}
+          feedback={feedback}
+          headline={headline}
+          notice={notice}
+          outputRef={outputRef}
+          result={result}
+          runPipeline={runPipeline}
+          runState={runState}
+          setAuthorName={setAuthorName}
+          setExpected={setExpected}
+          setFeedback={setFeedback}
+          setHeadline={setHeadline}
+          steps={steps}
+          submitFeedback={submitFeedback}
+        />
+      )}
+    </main>
+  );
+}
+
+function TabButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "h-12 border-b-2 px-2 text-sm font-semibold",
+        active ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-900",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EditorialCheck({
+  authorName,
+  canRun,
+  cleanJunk,
+  editor,
+  estimatedSeconds,
+  expected,
+  feedback,
+  headline,
+  notice,
+  outputRef,
+  result,
+  runPipeline,
+  runState,
+  setAuthorName,
+  setExpected,
+  setFeedback,
+  setHeadline,
+  steps,
+  submitFeedback,
+}: {
+  authorName: string;
+  canRun: boolean;
+  cleanJunk: () => void;
+  editor: Editor | null;
+  estimatedSeconds: number;
+  expected: string;
+  feedback: string;
+  headline: string;
+  notice: string;
+  outputRef: RefObject<HTMLElement | null>;
+  result: RunResult | null;
+  runPipeline: () => void;
+  runState: RunState;
+  setAuthorName: Dispatch<SetStateAction<string>>;
+  setExpected: Dispatch<SetStateAction<string>>;
+  setFeedback: Dispatch<SetStateAction<string>>;
+  setHeadline: Dispatch<SetStateAction<string>>;
+  steps: PipelineStep[];
+  submitFeedback: () => void;
+}) {
+  return (
+    <>
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0">
           <div className="mb-4 grid gap-3 md:grid-cols-2">
@@ -359,7 +473,122 @@ export function AuditWorkspace({ userEmail }: { userEmail: string }) {
           </div>
         </div>
       </section>
-    </main>
+    </>
+  );
+}
+
+function AdminPanel({ userEmail }: { userEmail: string }) {
+  const summary = [
+    { label: "Checks Run", value: "154", detail: "All attempts · 30 days" },
+    { label: "Unique Articles Checked", value: "143", detail: "Successful checks · 30 days" },
+    { label: "Active Users", value: "33", detail: "Unique employee accounts" },
+    { label: "Total API Tokens Used", value: "571.3K", detail: "Recorded input + output · 30 days" },
+    { label: "Total Est. Cost (₹)", value: "₹567.15", detail: "Claude Sonnet actual input/output · ₹95/$" },
+  ];
+
+  const recentUsage = [
+    ["chandan.kumar@indianexpress.com", "Financial Express", "01 Sep 2026, 18:18 IST", "Success", "REWORK", "7 / 10", "8,420", "₹31.80"],
+    ["desk.user@financialexpress.com", "Financial Express", "01 Sep 2026, 17:42 IST", "Success", "RETAIN", "4 / 5", "5,910", "₹19.35"],
+    ["editor@indianexpress.com", "Indian Express", "31 Aug 2026, 21:08 IST", "Review", "NOINDEX needs approval", "2 / 3", "3,740", "₹12.40"],
+  ];
+
+  const activity = [
+    [userEmail, "Admin", "Opened administration dashboard", "01 Sep 2026, 18:20 IST"],
+    ["desk.user@financialexpress.com", "User", "Submitted feedback for admin review", "01 Sep 2026, 17:55 IST"],
+    ["editor@indianexpress.com", "User", "Completed editorial check", "31 Aug 2026, 21:12 IST"],
+  ];
+
+  return (
+    <section className="mx-auto max-w-7xl space-y-5 px-5 py-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {summary.map((item) => (
+          <div key={item.label} className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{item.value}</p>
+            <p className="mt-1 text-xs text-slate-500">{item.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      <AdminTable
+        title="Recent Usage"
+        headers={["User ID", "Publication", "Checked on", "Status", "Reason", "URLs", "Words", "Est. Cost (₹)"]}
+        rows={recentUsage}
+      />
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <AdminTable title="User Activity" headers={["User ID", "Role", "Activity", "Date/Time"]} rows={activity} />
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-teal-700" />
+            <h2 className="text-lg font-semibold text-slate-950">User Access</h2>
+          </div>
+          <div className="mt-4 space-y-3">
+            <input
+              className="h-11 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-teal-600"
+              placeholder="employee@indianexpress.com"
+            />
+            <select className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-teal-600">
+              <option>User</option>
+              <option>Admin</option>
+            </select>
+            <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-teal-700 px-4 text-sm font-semibold text-white">
+              <LockKeyhole className="h-4 w-4" />
+              Stage Access Request
+            </button>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Prototype panel for allowlisting employee IDs when standard Google domain login needs manual admin review.
+          </p>
+        </section>
+      </div>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <Activity className="h-5 w-5 text-teal-700" />
+          <h2 className="text-lg font-semibold text-slate-950">Operational Notes</h2>
+        </div>
+        <div className="mt-3 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <p className="rounded-md bg-slate-50 p-3">Move usage rows from prototype data to Supabase audit tables before wider rollout.</p>
+          <p className="rounded-md bg-slate-50 p-3">Add admin approval state before feedback can be used for prompt/model training.</p>
+          <p className="rounded-md bg-slate-50 p-3">Keep API keys and prompts server-only; never use NEXT_PUBLIC_ for sensitive values.</p>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function AdminTable({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 p-5">
+        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              {headers.map((header) => (
+                <th key={header} className="px-4 py-3 font-semibold">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.join("|")} className="text-slate-700">
+                {row.map((cell) => (
+                  <td key={cell} className="px-4 py-3">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
