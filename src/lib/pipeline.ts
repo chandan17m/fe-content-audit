@@ -91,3 +91,75 @@ export function buildPrototypeOutput(cleanedBody: string): PipelineOutput {
     },
   };
 }
+
+export function normalizePipelineOutput(raw: unknown, cleanedBody: string): PipelineOutput {
+  const fallback = buildPrototypeOutput(cleanedBody);
+
+  if (!raw || typeof raw !== "object") {
+    return {
+      ...fallback,
+      actionTag: "REWORK",
+      confidence: "Low",
+      humanReviewRequired: true,
+      editorialSummary: "Model response could not be parsed. Human review is required.",
+      recommendations: ["[MODEL_PARSE_FAIL] Re-run the article or review the model response manually."],
+      json: {
+        schema_version: "model-parse-fallback-v0.1",
+        human_review_required: true,
+        raw_response: raw,
+      },
+    };
+  }
+
+  const data = raw as Record<string, unknown>;
+  const actionTag = normalizeEnum(data.action_tag ?? data.actionTag, [
+    "RETAIN",
+    "REWORK",
+    "NOINDEX",
+    "DELETE_410",
+    "NOT_APPLICABLE",
+  ] as const, fallback.actionTag);
+  const domainSignalImpact = normalizeEnum(data.domain_signal_impact ?? data.domainSignalImpact, [
+    "Positive",
+    "Neutral",
+    "Negative",
+  ] as const, fallback.domainSignalImpact);
+  const confidence = normalizeEnum(data.confidence, ["High", "Medium", "Low"] as const, "Low");
+  const recommendations = normalizeStringArray(data.recommendations);
+  const editorialSummary =
+    typeof data.editorial_summary === "string"
+      ? data.editorial_summary
+      : typeof data.editorialSummary === "string"
+        ? data.editorialSummary
+        : "Model audit completed. Review the JSON details below before taking editorial action.";
+
+  return {
+    actionTag,
+    domainSignalImpact,
+    confidence,
+    humanReviewRequired:
+      typeof data.human_review_required === "boolean"
+        ? data.human_review_required
+        : typeof data.humanReviewRequired === "boolean"
+          ? data.humanReviewRequired
+          : confidence !== "High",
+    recommendations:
+      recommendations.length > 0
+        ? recommendations
+        : ["[EDITORIAL_REVIEW] Review output before applying article-level action."],
+    editorialSummary,
+    json: data,
+  };
+}
+
+function normalizeEnum<T extends readonly string[]>(value: unknown, allowed: T, fallback: T[number]): T[number] {
+  return typeof value === "string" && allowed.includes(value) ? value : fallback;
+}
+
+function normalizeStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && Boolean(item.trim()));
+}
