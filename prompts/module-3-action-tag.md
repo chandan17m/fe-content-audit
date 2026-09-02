@@ -1,7 +1,7 @@
 # MODULE 3 — ACTION TAG AND OUTPUT
 
-**Your job:** Apply the decision matrix. Produce the
-final narrative output. Input: Module 2 JSON.
+**Your job:** Apply the decision matrix. Produce the final
+narrative output. Input: Module 2 JSON.
 Read all upstream fields as fixed. Do not re-derive.
 Output is narrative only — no JSON block.
 
@@ -22,7 +22,6 @@ If Module 2 JSON is missing required fields — stop:
 ## STEP 1 — MENTAL HEALTH CHECK
 
 Runs before the decision matrix.
-
 If [MENTAL_HEALTH_DISTRESS Level 2] is in `flags_fired`
 from Module 2 JSON AND all three verdicts are Fail:
 → Action Tag: DELETE_410
@@ -70,16 +69,15 @@ T3 Lite variants count as their base: Pass/Partial/Fail.
 Upgrade NOINDEX → DELETE_410 if ALL THREE true:
 (1) [SOCIAL_MEDIA_AGGREGATION] or [AUTHOR_LEVEL_SCALED_ABUSE]
     in `flags_fired` from Module 2 JSON.
-(2) Article is older than 18 months (from `published_date`
-    in Module 1 JSON) OR `pre_publication` is false and
-    `published_date` is null.
-(3) No reworkable editorial core — defined as: none of (a) a
-    named court order or regulatory ruling cited by case name,
-    (b) an original interview with a named expert, or (c) named
-    primary data from Tier A or B.
+(2) Article older than 18 months (from `published_date`
+    in Module 1 JSON) OR `published_date` is null.
+(3) No reworkable editorial core — none of: (a) named court
+    order or regulatory ruling cited by case name, (b) original
+    interview with a named expert, (c) named primary data
+    from Tier A or B.
 
-**Fallback:** matrix row genuinely ambiguous → NOINDEX as
-conservative default. Set HUMAN REVIEW REQUIRED: Yes.
+Fallback: matrix row genuinely ambiguous → NOINDEX as
+conservative default. Set HUMAN REVIEW: Yes.
 
 ---
 
@@ -94,8 +92,8 @@ conservative default. Set HUMAN REVIEW REQUIRED: Yes.
 | section_classification Non-Core — any tag | Negative |
 | NOT_APPLICABLE | Neutral |
 
-Write one sentence connecting this URL's verdict to
-FE's domain-level recovery. Reference the specific
+Write one sentence connecting this verdict to FE's
+domain-level recovery. Reference the specific
 Google update dimension affected.
 
 ---
@@ -103,22 +101,25 @@ Google update dimension affected.
 ## STEP 4 — GOOGLE UPDATE IMPLICATION
 
 **Core Update compliance:**
-- Compliant: HCS Pass AND E-E-A-T Pass
-- At Risk: HCS Partial OR E-E-A-T Partial
-- Non-Compliant: HCS Fail OR E-E-A-T Fail
+- Compliant: hcs_verdict Pass AND eeat_verdict Pass
+- At Risk: hcs_verdict Partial OR eeat_verdict Partial
+- Non-Compliant: hcs_verdict Fail OR eeat_verdict Fail
 
 **Spam Policy compliance:**
-- Compliant: Spam Pass
-- At Risk: Spam Partial
-- Non-Compliant: Spam Fail
+- Compliant: spam_verdict Pass
+- At Risk: spam_verdict Partial
+- Non-Compliant: spam_verdict Fail
 
 **Discover eligibility:**
-- Eligible: section_classification Core AND [DISCOVER_IDENTITY_RISK]
-  not in flags_fired AND spam_verdict Pass
-- At Risk: section_classification Core AND [DISCOVER_IDENTITY_RISK]
-  in flags_fired OR spam_verdict Partial
-- Ineligible: section_classification Non-Core OR spam_verdict Fail
-  OR [NON_CORE_DOMAIN_DILUTION] in flags_fired
+- Eligible: section_classification Core AND
+  [DISCOVER_IDENTITY_RISK] not in flags_fired AND
+  spam_verdict Pass
+- At Risk: section_classification Core AND
+  [DISCOVER_IDENTITY_RISK] in flags_fired OR
+  spam_verdict Partial
+- Ineligible: section_classification Non-Core OR
+  spam_verdict Fail OR [NON_CORE_DOMAIN_DILUTION]
+  in flags_fired
 
 ---
 
@@ -126,7 +127,7 @@ Google update dimension affected.
 
 | Level | Criteria |
 |---|---|
-| High | Every verdict traces to a named rule. Matrix row unambiguous. Another run on the same input reaches the same Action Tag. |
+| High | Every verdict traces to a named rule. Matrix row unambiguous. Same input on another run reaches the same Action Tag. |
 | Medium | At least one verdict relied on a secondary criterion, not a hard gate. Matrix row still unambiguous. State the secondary criterion in output. |
 | Low | YMYL tier uncertain. OR a verdict cannot be traced to a single named rule. OR matrix row ambiguous. Set HUMAN REVIEW: Yes. State which verdict and why. |
 
@@ -135,8 +136,8 @@ Google update dimension affected.
 ## STEP 6 — RECOMMENDATIONS
 
 Maximum 3 items. Priority order.
-Each flag in `flags_fired` from Module 2 JSON is a mandatory
-item. Apply flag priority order from Module 2 Step 5.
+Each flag in `flags_fired` from Module 2 JSON is a mandatory item.
+Apply flag priority order from Module 2 Step 5.
 
 **Urgency label — determined by Action Tag:**
 
@@ -147,35 +148,29 @@ item. Apply flag priority order from Module 2 Step 5.
 | NOINDEX | Required before any reinstatement | Required before any reinstatement |
 | DELETE_410 | Deletion rationale | Redirect note if applicable |
 
-**For RETAIN:** write `None.` No items needed.
+**For RETAIN:** write `None.`
 
-**Format for all other Action Tags:**
+**For all others — three-part format:**
 `[Urgency label] [Specific editorial action] — [what it
 achieves for the reader or signal] [FLAG_CODE]`
 
-Rules:
-- Flag code at END, in brackets. Never lead with flag code.
-- Action must be specific enough for a journalist to execute
-  without reading this prompt.
-- Name the exact section, source type, or structural element.
+Flag code at END in brackets — never lead with flag code.
+Action must be specific enough for a journalist to execute
+without reading this prompt.
 
 ---
 
 ## STEP 7 — EDITORIAL OPPORTUNITY
 
-Identify a follow-up story angle that is distinct from the
-current URL — something that would score better as a
-standalone piece than as a tail paragraph here.
-
 Populate when ANY of these apply:
 (1) A named case, order, or tender has a time-bound outcome
     the current piece cannot track.
 (2) A sub-topic has its own primary source and reader need,
-    strong enough to anchor its own URL.
+    strong enough to anchor a standalone URL.
 (3) A sourcing gap is more efficiently resolved by
     commissioning a new story than reworking this one.
 
-Write one sentence, editorial voice, for the desk editor.
+One sentence. Editorial voice. For the desk editor.
 No flag codes, no framework language.
 
 Write `null` when none of the three conditions apply.
@@ -205,7 +200,6 @@ Spam:    [spam_verdict] — [spam_core_finding from Module 2 JSON]
 
 RECOMMENDATIONS:
 [None. — for RETAIN]
-[Or numbered list 1–3 items for all others]
 1. [Urgency label] [Specific action] — [what it achieves] [FLAG]
 2. [Urgency label] [Specific action] — [what it achieves] [FLAG]
 3. [Urgency label] [Specific action] — [what it achieves] [FLAG]
@@ -224,21 +218,20 @@ language. Written for the journalist receiving this verdict.]
 
 1. Do not classify. Do not score. Matrix lookup only.
 2. Read all upstream fields as fixed. Do not re-derive.
-3. Action Tag is determined by the matrix row only —
-   not by overall impression.
-4. SCORING SUMMARY must carry the verbatim FINDING text
-   from Module 2 output — not rewritten.
+3. Action Tag is determined by the matrix row only.
+4. SCORING SUMMARY carries verbatim FINDING text from
+   Module 2 JSON — not rewritten or paraphrased.
 5. Recommendations lead with urgency label.
    Flag code appears at end only.
 6. For RETAIN: write "None." Do not populate items.
 7. EDITORIAL OPPORTUNITY is mandatory — string or null.
-   Never omit.
-8. EDITORIAL SUMMARY: zero technical framework language,
-   zero flag codes, zero module names.
-9. If Action Tag in narrative contradicts the matrix row
-   applied — stop, correct, then output.
+8. EDITORIAL SUMMARY: zero flag codes, zero framework
+   language, zero module names.
+9. If Action Tag contradicts the matrix row — stop,
+   correct, then output.
 
 ---
 
-*FE Content Audit Pipeline | M1-v2.0 | M2-v2.0 | M3-v2.0*
-*Parent: v3.9.0*
+*FE Content Audit Pipeline — System Version*
+*M1-v3.0 | M2-v3.0 | M3-v3.0 | Pipeline: v3.9.0*
+*Deployment: Vercel | fe-content-audit-phi.vercel.app*
