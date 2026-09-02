@@ -1,15 +1,27 @@
+import { saveAuditRun } from "@/lib/audit-store";
 import { cleanArticleText, normalizePipelineOutput } from "@/lib/pipeline";
 import { getModulePrompts } from "@/lib/server-prompts";
+import { createClient } from "@/lib/supabase-server";
 
 const anthropicMessagesUrl = "https://api.anthropic.com/v1/messages";
 const defaultModel = "claude-sonnet-4-6";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) {
+    return Response.json({ message: "Login is required." }, { status: 401 });
+  }
+
   const prompts = await getModulePrompts();
   const body = (await request.json()) as {
     content?: string;
     headline?: string;
-    authorName?: string;
+    authorUrl?: string;
+    excerpt?: string;
   };
 
   const cleaned = cleanArticleText(body.content ?? "");
@@ -25,15 +37,16 @@ export async function POST(request: Request) {
     );
   }
 
-  let modelResponse: unknown;
+  let modelResult: Awaited<ReturnType<typeof runClaudeAudit>>;
 
   try {
-    modelResponse = await runClaudeAudit({
+    modelResult = await runClaudeAudit({
       apiKey,
       model: process.env.MODEL_PROVIDER_MODEL || defaultModel,
       prompts,
       headline: body.headline ?? "",
-      authorName: body.authorName ?? "",
+      authorUrl: body.authorUrl ?? "",
+      excerpt: body.excerpt ?? "",
       cleaned,
     });
   } catch (error) {
@@ -46,12 +59,26 @@ export async function POST(request: Request) {
     );
   }
 
-  const output = normalizePipelineOutput(modelResponse, cleaned);
+  const output = normalizePipelineOutput(modelResult.json, cleaned);
+  const savedRun = await saveAuditRun({
+    userEmail: user.email,
+    headline: body.headline ?? "Untitled analysis",
+    authorUrl: body.authorUrl ?? "",
+    excerpt: body.excerpt ?? "",
+    cleanedBody: cleaned,
+    output: output.json,
+    status: "success",
+    reason: output.editorialSummary,
+    inputTokens: modelResult.inputTokens,
+    outputTokens: modelResult.outputTokens,
+  }).catch(() => null);
 
   return Response.json({
-    runId: crypto.randomUUID(),
+    runId: savedRun?.id ?? crypto.randomUUID(),
     status: "complete",
     cleaned,
+    wordCount: savedRun?.wordCount ?? cleaned.split(/\s+/).filter(Boolean).length,
+    estimatedCostInr: savedRun?.estimatedCostInr ?? 0,
     output,
     promptConfigured: Boolean(prompts.module1 && prompts.module2 && prompts.module3),
     completedAt: new Date().toISOString(),
@@ -63,14 +90,16 @@ async function runClaudeAudit({
   model,
   prompts,
   headline,
-  authorName,
+  authorUrl,
+  excerpt,
   cleaned,
 }: {
   apiKey: string;
   model: string;
   prompts: Awaited<ReturnType<typeof getModulePrompts>>;
   headline: string;
-  authorName: string;
+  authorUrl: string;
+  excerpt: string;
   cleaned: string;
 }) {
   const response = await fetch(anthropicMessagesUrl, {
@@ -108,7 +137,7 @@ async function runClaudeAudit({
             prompts.module3,
             "",
             "ARTICLE METADATA:",
-            JSON.stringify({ headline, author_name: authorName }),
+            JSON.stringify({ headline, author_url: authorUrl, excerpt }),
             "",
             "CLEANED ARTICLE BODY:",
             cleaned,
@@ -120,6 +149,7 @@ async function runClaudeAudit({
 
   const data = (await response.json()) as {
     content?: Array<{ type?: string; text?: string }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
     error?: { message?: string };
   };
 
@@ -133,7 +163,11 @@ async function runClaudeAudit({
     throw new Error("Model provider returned an empty response.");
   }
 
-  return parseJsonObject(text);
+  return {
+    json: parseJsonObject(text),
+    inputTokens: Number(data.usage?.input_tokens || 0),
+    outputTokens: Number(data.usage?.output_tokens || 0),
+  };
 }
 
 function parseJsonObject(text: string) {
