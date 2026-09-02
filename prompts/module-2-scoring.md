@@ -13,7 +13,7 @@ INPUT 1 — MODULE 1 JSON:
 [paste complete Module 1 JSON block]
 
 INPUT 2 — CLEANED BODY:
-[paste Module 1 Cleaned Body block — not the original raw text]
+[paste Cleaned Body from Module 1 — not the original raw text]
 ```
 
 If Module 1 JSON is missing required fields — stop:
@@ -42,8 +42,8 @@ or "reports [publication]" → that source downgrades to Tier D.
   "AMFI data showed" with no named report → Tier D.
 - CRISIL Research/Intelligence + named report → Tier A.
   "CRISIL showed" with no named report → Tier D.
-- Specific figures (percentages, return ranges, fund comparisons)
-  with no named source, dataset, or time period → Tier E for those claims.
+- Specific figures with no named source, dataset, or time
+  period → Tier E for those claims.
 
 ---
 
@@ -53,11 +53,9 @@ Apply in sequence. Stop at first match.
 
 **HCS-1 — Vagueness Test (T1 and T2 only):**
 If ALL THREE present simultaneously → HCS: Fail.
-
 - No named figures (rupee amounts, percentages, thresholds)
 - No named instruments (schemes, products, regulations, policies)
 - No named Indian financial authorities or institutions
-
 Skip HCS-1 for T3.
 
 **HCS-2 — Gate A1 ceiling (T1 and T2 only):**
@@ -86,7 +84,7 @@ Apply in sequence. Stop at first binding outcome.
 | WIRE on T1 | Partial ceiling — cannot reach Pass. |
 | UNVERIFIED | Partial ceiling — cannot reach Pass. |
 | NO-BYLINE | Partial ceiling — cannot reach Pass. |
-| VERIFIED-FALLBACK | No ceiling — proceed to EEAT-2. |
+| VERIFIED or VERIFIED-FALLBACK | No ceiling — proceed to EEAT-2. |
 | WIRE on T2 or T3 | No ceiling — proceed to EEAT-2. |
 
 **EEAT-2 — Gate check:**
@@ -97,16 +95,16 @@ Gate A3 in `gates_fired` (Module 1 JSON) → E-E-A-T: Fail — stop.
 
 | Verdict | All conditions must be met |
 |---|---|
-| Pass | (1) VERIFIED-FALLBACK status. AND (2) Primary claims supported by Tier A or B. AND (3) On T1: actionable advice validated by a named Tier C expert quoted with name, role, and institution all visible. |
-| Partial | VERIFIED-FALLBACK or WIRE (T2). AND at least one of: sourcing Tier C/D rather than A/B; one gap in source chain; wire on T2. AND no Tier A gate fired. |
+| Pass | (1) VERIFIED or VERIFIED-FALLBACK status. AND (2) Primary claims supported by Tier A or B. AND (3) On T1: actionable advice validated by a named Tier C expert quoted with name, role, and institution all visible. |
+| Partial | VERIFIED, VERIFIED-FALLBACK, or WIRE (T2). AND at least one of: sourcing Tier C/D rather than A/B; one gap in source chain; wire on T2. AND no Tier A gate fired. |
 | Fail | Any Tier A gate fired. OR CONFLICT-UNVERIFIED. OR UNVERIFIED on T1 with no independent named Tier C expert providing primary backing. |
 
 **EEAT-4 — T3 Lite (T3 only):**
 
 | Verdict | Criteria |
 |---|---|
-| Pass (T3 Lite) | VERIFIED-FALLBACK status AND primary claims from Tier A, B, or C. |
-| Partial (T3 Lite) | UNVERIFIED or NO-BYLINE status. OR sourcing primarily Tier D. |
+| Pass (T3 Lite) | VERIFIED or VERIFIED-FALLBACK AND primary claims from Tier A, B, or C. |
+| Partial (T3 Lite) | UNVERIFIED or NO-BYLINE. OR sourcing primarily Tier D. |
 | Fail (T3 Lite) | NO-BYLINE. OR primary source Tier E. OR demonstrably AI-generated with no human attribution. |
 
 ---
@@ -126,8 +124,8 @@ Record [STRUCTURAL_INFLATION].
 (a) Primary claims have no named source, dataset, or time period.
 (b) Advice or analysis is generic — replicable without proprietary
     data, original reporting, or original research.
-(c) Apparent depth is structural only — created by subheadings
-    or formatting, not substantive contribution.
+(c) Apparent depth is structural only — subheadings or formatting,
+    not substantive contribution.
 
 > Authorship alone does not pass Spam. Authored thin content
 > with no sourced data fails the Thin Content check.
@@ -136,14 +134,9 @@ Record [STRUCTURAL_INFLATION].
 
 | Verdict | Criteria |
 |---|---|
-| Pass | Genuine original reporting. No scaled production signals. Primary data claims are sourced, named, or tied to named events that make them non-replicable. |
+| Pass | Genuine original reporting. No scaled production signals. Primary data claims are sourced, named, or tied to named events making them non-replicable. |
 | Partial | Some templated structure or aggregation BUT at least one claim independently verified with a named Tier C source OR at least one non-replicable original contribution. Gate A2 not fired. |
 | Fail | Gate A2 fired. OR Thin Content check fired. OR scaled or scraped content confirmed. |
-
-**Batch flag:** If same author produces 2+ articles in same
-session with SMA format AND identical/near-identical disclaimer
-wording → fire [AUTHOR_LEVEL_SCALED_ABUSE]. Overrides Spam
-Partial to Fail for all matching articles.
 
 ---
 
@@ -154,34 +147,32 @@ item in Module 3. Priority order:
 
 | Flag | Trigger |
 |---|---|
-| [MENTAL_HEALTH_DISTRESS Level 2] | "Hopeless," "helpless," or survival-only motivation language published without any mental health resource. Auto-escalate. |
-| [MENTAL_HEALTH_DISTRESS Level 1] | General financial/employment distress language without mental health resource. |
-| [DATA_CLARITY_FAIL] | Performance/return/penalty figures with no named source, no named dataset, no named time period. OR sole citation >3 years old on fast-moving topic. |
+| [MENTAL_HEALTH_DISTRESS Level 2] | "Hopeless," "helpless," or survival-only motivation language without any mental health resource in the article. Auto-escalate. |
+| [MENTAL_HEALTH_DISTRESS Level 1] | General financial or employment distress language without mental health resource. |
+| [DATA_CLARITY_FAIL] | Performance/return/penalty figures with no named source, no named dataset, no named time period. OR sole citation older than 3 years on a fast-moving topic. |
 | [SOCIAL_MEDIA_AGGREGATION] | Gate A2 confirmed. |
 | [STRUCTURAL_INFLATION] | Subheadings creating appearance of depth over 2–3 sentence sections with thin content. |
 | [DIRECTIVE_HEADLINE_FAIL] | Action directive in headline; body names no specifics to fulfil it. |
-| [EXCERPT_MISMATCH] | Excerpt and body contain materially different claims. |
+| [EXCERPT_MISMATCH] | Compare `excerpt` field from Module 1 JSON against the article body's central claim. If the excerpt makes a materially different or more specific claim than the body supports — fire this flag. |
 | [T1_YMYL_ACTIONABILITY_GAP] | T1 financial topic — data reported — no guidance layer for a reader in the same situation. |
 | [SECTION_MISMATCH] | `section_mismatch_flag` is true in Module 1 JSON. |
 | [AUTHOR_LEVEL_SCALED_ABUSE] | Same author + SMA format + 2+ articles in same session. Overrides Spam Partial to Fail. |
-| [NON_CORE_DOMAIN_DILUTION] | Any Non-Core section content. |
-| [DISCOVER_IDENTITY_RISK] | Core section content covering topic outside FE's financial/business identity. |
+| [NON_CORE_DOMAIN_DILUTION] | section_classification is Non-Core. |
+| [DISCOVER_IDENTITY_RISK] | section_classification is Core AND article covers a topic outside FE's financial/business editorial identity. |
 
 ---
 
 ## STEP 6 — DISCLAIMER AND FRESHNESS
 
 **Disclaimer:** Search full cleaned body.
-- Found → quote verbatim in output. Effect: neutral only.
-  Never use to upgrade any verdict.
-- Not found → negative signal against E-E-A-T. Does not
-  override verdicts but record absent.
+- Found → quote verbatim. Effect: neutral. Never use to upgrade.
+- Not found → negative signal against E-E-A-T.
 
 **Freshness:**
 - Market, regulatory, AI, crypto: faster decay. Flag if
-  primary citation >6 months on a fast-moving topic.
+  primary citation older than 6 months on a fast-moving topic.
 - Evergreen: 18-month decay threshold.
-- PRE_PUBLICATION with no date → freshness: skipped.
+- `published_date` null in Module 1 JSON → freshness: skipped.
 
 ---
 
@@ -189,17 +180,17 @@ item in Module 3. Priority order:
 
 ```json
 {
-  "schema_version": "M2-v2.0",
+  "schema_version": "M2-v3.0",
 
   "carried_from_m1": {
     "ymyl_tier": "T1 | T2 | T3",
     "section_classification": "Core | Non-Core | Mixed",
     "section_path": "string",
     "author_status": "string",
+    "author_name": "string | null",
     "gates_fired": [],
     "published_date": "string | null",
-    "published_date_source": "page | editor-provided | not-available",
-    "pre_publication": "true | false",
+    "excerpt": "string | null",
     "section_mismatch_flag": "true | false"
   },
 
@@ -244,16 +235,18 @@ module2_notes is for prompt quality signals only.
 ## RULES
 
 1. Do not assign Action Tags. Do not know Module 3.
-2. Read all Module 1 fields as fixed data.
-   Do not re-derive any of them.
+2. Read all Module 1 fields as fixed. Do not re-derive.
 3. Verbatim evidence must be verbatim — paraphrased
    text inside quotation marks is a scoring error.
-4. When a criteria row is partially met, assign the
-   lower verdict — never round up.
-5. Disclaimer present is neutral. Never use to upgrade.
-6. [AUTHOR_LEVEL_SCALED_ABUSE] overrides Spam Partial
+4. When a criteria row is partially met, assign the lower
+   verdict — never round up.
+5. VERIFIED and VERIFIED-FALLBACK both clear the EEAT-1
+   ceiling check. Treat them identically at EEAT-1.
+6. Disclaimer present is neutral. Never use to upgrade.
+7. [AUTHOR_LEVEL_SCALED_ABUSE] overrides Spam Partial
    to Fail before writing output.
-7. NOTES is for prompt quality signals only.
+8. EXCERPT_MISMATCH fires on comparison with `excerpt`
+   field from Module 1 JSON — not from memory or inference.
 
 ---
 ---
