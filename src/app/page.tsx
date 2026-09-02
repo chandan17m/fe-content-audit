@@ -1,6 +1,7 @@
 import { AuditWorkspace } from "@/components/audit-workspace";
 import { LoginScreen } from "@/components/login-screen";
 import { isAllowedEmail } from "@/lib/auth";
+import { getAppUserByEmail } from "@/lib/audit-store";
 import { createClient } from "@/lib/supabase-server";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -11,9 +12,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
   const authError = typeof params.auth_error === "string" ? params.auth_error : undefined;
 
-  if (!user || !isAllowedEmail(user.email)) {
+  const appUser = user ? await getAppUserByEmail(user.email).catch(() => null) : null;
+
+  if (!user || (!isAllowedEmail(user.email) && !appUser)) {
     return <LoginScreen authError={authError} />;
   }
 
-  return <AuditWorkspace userEmail={user.email ?? "unknown"} />;
+  return <AuditWorkspace userEmail={user.email ?? "unknown"} role={appUser?.role ?? "user"} />;
 }
